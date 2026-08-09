@@ -1,24 +1,40 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
+const safeFetchJson = async (url, options = {}) => {
+  let response;
+  try {
+    response = await fetch(url, options);
+  } catch (err) {
+    throw new Error('Unable to connect to backend server. Please make sure the backend is running on port 5000.');
+  }
+
+  const text = await response.text();
+  let data = {};
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      throw new Error('Invalid JSON response from server');
+    }
+  }
+
+  if (!response.ok) {
+    throw new Error(data.error || `Server error (${response.status})`);
+  }
+
+  return data;
+};
+
 export const loginUser = async (username, avatar) => {
-  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+  return safeFetchJson(`${API_BASE_URL}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username, avatar }),
   });
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error || 'Login failed');
-  }
-  return response.json();
 };
 
 export const fetchUsers = async () => {
-  const response = await fetch(`${API_BASE_URL}/auth/users`);
-  if (!response.ok) {
-    throw new Error('Failed to fetch users');
-  }
-  return response.json();
+  return safeFetchJson(`${API_BASE_URL}/auth/users`);
 };
 
 export const fetchMessages = async (receiver_id = 'global', sender_id = null) => {
@@ -26,33 +42,21 @@ export const fetchMessages = async (receiver_id = 'global', sender_id = null) =>
   if (sender_id && receiver_id !== 'global') {
     url += `&sender_id=${encodeURIComponent(sender_id)}`;
   }
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error('Failed to fetch messages');
-  }
-  return response.json();
+  return safeFetchJson(url);
 };
 
 export const postMessage = async (sender_id, receiver_id, content) => {
-  const response = await fetch(`${API_BASE_URL}/messages`, {
+  return safeFetchJson(`${API_BASE_URL}/messages`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ sender_id, receiver_id, content }),
   });
-  if (!response.ok) {
-    throw new Error('Failed to send message');
-  }
-  return response.json();
 };
 
 export const markReadApi = async (sender_id, receiver_id) => {
-  const response = await fetch(`${API_BASE_URL}/messages/read`, {
+  return safeFetchJson(`${API_BASE_URL}/messages/read`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ sender_id, receiver_id }),
   });
-  if (!response.ok) {
-    throw new Error('Failed to update read status');
-  }
-  return response.json();
 };
