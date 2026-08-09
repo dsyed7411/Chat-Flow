@@ -1,0 +1,26 @@
+services:
+  # Backend Node.js + Express + Socket.io Web Service
+  - type: web
+    name: pulsechat-backend
+    env: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: CLIENT_URL
+        sync: false # Set to your deployed frontend URL on Render
+
+  # Frontend React (Vite) Static Site
+  - type: web
+    name: pulsechat-frontend
+    env: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        sync: false # Set to https://pulsechat-backend.onrender.com/api
+      - key: VITE_SOCKET_URL
+        sync: false # Set to https://pulsechat-backend.onrender.com

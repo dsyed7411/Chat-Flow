@@ -67,12 +67,13 @@ Chat Application/
 │       │   └── ConnectionBadge.jsx# Live WebSocket status badge
 │       └── styles/
 │           └── index.css          # Glassmorphic CSS design system
+├── render.yaml                    # Render Blueprint Deployment Configuration
 └── README.md
 ```
 
 ---
 
-## 🚀 Getting Started & Installation
+## 🚀 Getting Started & Local Installation
 
 ### Prerequisites
 - **Node.js** (v16+ recommended)
@@ -123,6 +124,49 @@ Chat Application/
    npm run dev
    ```
 4. Open your browser and navigate to `http://localhost:5173`.
+
+---
+
+## ☁️ Deploying on Render (Free Hosting)
+
+You can easily host **both the backend and frontend** for FREE on [Render](https://render.com).
+
+### Option 1: Automatic Deployment using Render Blueprint (Recommended)
+1. Go to [Render Dashboard](https://dashboard.render.com/) and click **New +** ➔ **Blueprint**.
+2. Connect your GitHub repository `https://github.com/dsyed7411/Chat-Flow`.
+3. Render will auto-detect the `render.yaml` file in your repository and configure both services automatically!
+
+---
+
+### Option 2: Manual Step-by-Step Deployment on Render
+
+#### Step A: Deploy the Backend (Web Service)
+1. In Render Dashboard, click **New +** ➔ **Web Service**.
+2. Connect your GitHub repository `Chat-Flow`.
+3. Fill in the following settings:
+   - **Name**: `pulsechat-backend`
+   - **Root Directory**: `backend`
+   - **Environment**: `Node`
+   - **Build Command**: `npm install`
+   - **Start Command**: `npm start`
+4. Under **Environment Variables**, add:
+   - `CLIENT_URL`: `https://<your-frontend-service-name>.onrender.com`
+5. Click **Create Web Service**. Note down your Backend URL (e.g. `https://pulsechat-backend.onrender.com`).
+
+#### Step B: Deploy the Frontend (Static Site)
+1. In Render Dashboard, click **New +** ➔ **Static Site**.
+2. Connect the same GitHub repository `Chat-Flow`.
+3. Fill in the following settings:
+   - **Name**: `pulsechat-frontend`
+   - **Root Directory**: `frontend`
+   - **Build Command**: `npm install && npm run build`
+   - **Publish Directory**: `dist`
+4. Under **Environment Variables**, add:
+   - `VITE_API_URL`: `https://pulsechat-backend.onrender.com/api`
+   - `VITE_SOCKET_URL`: `https://pulsechat-backend.onrender.com`
+5. Click **Create Static Site**.
+
+Once both services complete building, your live chat app will be fully functional on the internet!
 
 ---
 
