@@ -1,11 +1,21 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const getApiBaseUrl = () => {
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    return 'https://chat-flow-backend.onrender.com/api';
+  }
+  return 'http://localhost:5000/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 const safeFetchJson = async (url, options = {}) => {
   let response;
   try {
     response = await fetch(url, options);
   } catch (err) {
-    throw new Error('Unable to connect to backend server. Please make sure the backend is running on port 5000.');
+    throw new Error('Unable to connect to backend server. Make sure backend service is running.');
   }
 
   const text = await response.text();
