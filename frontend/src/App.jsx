@@ -15,12 +15,20 @@ import { initSocket, disconnectSocket, getSocket } from './services/socket';
 
 export const App = () => {
   const [currentUser, setCurrentUser] = useState(() => {
-    const saved = localStorage.getItem('pulsechat_user');
-    return saved ? JSON.parse(saved) : null;
+    try {
+      const saved = localStorage.getItem('pulsechat_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
   });
 
   const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('pulsechat_theme') || 'dark';
+    try {
+      return localStorage.getItem('pulsechat_theme') || 'dark';
+    } catch (e) {
+      return 'dark';
+    }
   });
 
   const [users, setUsers] = useState([]);
