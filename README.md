@@ -1,8 +1,8 @@
-# 💬 PulseChat - Real-Time Chat Application
+# 💬 ChatFlow - Real-Time Chat Application
 
 A modern, high-performance real-time chat application built with **React (Vite)**, **Node.js**, **Express**, **Socket.io**, and **SQLite**.
 
-![PulseChat Interface](https://img.shields.io/badge/Stack-React%20%7C%20Node.js%20%7C%20Socket.io%20%7C%20SQLite-6366f1)
+![ChatFlow Interface](https://img.shields.io/badge/Stack-React%20%7C%20Node.js%20%7C%20Socket.io%20%7C%20SQLite-6366f1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
 ---

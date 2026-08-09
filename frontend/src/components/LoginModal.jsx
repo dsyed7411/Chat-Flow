@@ -48,7 +48,7 @@ export const LoginModal = ({ onLogin }) => {
         <div className="login-header">
           <div className="brand-logo" style={{ justifyContent: 'center', marginBottom: '8px' }}>
             <MessageSquare size={32} style={{ color: 'var(--accent-primary)' }} />
-            <span style={{ fontSize: '2rem' }}>PulseChat</span>
+            <span style={{ fontSize: '2rem' }}>ChatFlow</span>
           </div>
           <p>Join the real-time chat workspace</p>
         </div>

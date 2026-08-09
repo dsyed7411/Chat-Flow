@@ -17,7 +17,7 @@ export const Sidebar = ({
       <div className="sidebar-header">
         <div className="brand-logo">
           <MessageSquare size={24} />
-          <span>PulseChat</span>
+          <span>ChatFlow</span>
         </div>
         <button
           onClick={onLogout}

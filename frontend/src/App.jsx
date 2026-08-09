@@ -16,7 +16,7 @@ import { initSocket, disconnectSocket, getSocket } from './services/socket';
 export const App = () => {
   const [currentUser, setCurrentUser] = useState(() => {
     try {
-      const saved = localStorage.getItem('pulsechat_user');
+      const saved = localStorage.getItem('chatflow_user') || localStorage.getItem('pulsechat_user');
       return saved ? JSON.parse(saved) : null;
     } catch (e) {
       return null;
@@ -25,7 +25,7 @@ export const App = () => {
 
   const [theme, setTheme] = useState(() => {
     try {
-      return localStorage.getItem('pulsechat_theme') || 'dark';
+      return localStorage.getItem('chatflow_theme') || localStorage.getItem('pulsechat_theme') || 'dark';
     } catch (e) {
       return 'dark';
     }
@@ -87,12 +87,13 @@ export const App = () => {
     const data = await loginUser(username, avatar);
     const user = data.user;
     setCurrentUser(user);
-    localStorage.setItem('pulsechat_user', JSON.stringify(user));
+    localStorage.setItem('chatflow_user', JSON.stringify(user));
   };
 
   // Handle user logout
   const handleLogout = () => {
     disconnectSocket();
+    localStorage.removeItem('chatflow_user');
     localStorage.removeItem('pulsechat_user');
     setCurrentUser(null);
   };

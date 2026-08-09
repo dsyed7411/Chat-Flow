@@ -29,7 +29,7 @@ class ErrorBoundary extends React.Component {
       return (
         <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', background: '#0b0f19', color: '#fff', textAlign: 'center', padding: '20px' }}>
           <div style={{ background: 'rgba(18, 24, 38, 0.95)', padding: '32px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)', maxWidth: '440px', boxShadow: '0 12px 32px rgba(0,0,0,0.5)' }}>
-            <h2 style={{ marginBottom: '12px', color: '#6366f1', fontSize: '1.5rem' }}>PulseChat Session Notice</h2>
+            <h2 style={{ marginBottom: '12px', color: '#6366f1', fontSize: '1.5rem' }}>ChatFlow Session Notice</h2>
             <p style={{ fontSize: '0.9rem', color: '#9ca3af', marginBottom: '24px', lineHeight: 1.5 }}>
               {this.state.error?.message || 'An unexpected issue occurred while loading the workspace.'}
             </p>
