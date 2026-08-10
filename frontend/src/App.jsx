@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { LoginModal } from './components/LoginModal';
 import { Sidebar } from './components/Sidebar';
 import { ChatHeader } from './components/ChatHeader';
@@ -38,14 +38,22 @@ export const App = () => {
     isGlobal: true
   });
   const [messages, setMessages] = useState([]);
-  const [connectionStatus, setConnectionStatus] = useState('offline');
+  const [connectionStatus, setConnectionStatus] = useState('reconnecting');
   const [typingUsers, setTypingUsers] = useState([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // Maintain activeChat reference for socket event handlers
+  const activeChatRef = useRef(activeChat);
+  useEffect(() => {
+    activeChatRef.current = activeChat;
+  }, [activeChat]);
 
   // Apply theme dataset
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('pulsechat_theme', theme);
+    try {
+      localStorage.setItem('chatflow_theme', theme);
+    } catch (e) {}
   }, [theme]);
 
   const toggleTheme = () => {
@@ -69,7 +77,6 @@ export const App = () => {
       const data = await fetchMessages(activeChat.id, currentUser.id);
       setMessages(data.messages || []);
 
-      // If viewing direct messages from another user, mark as read
       if (!activeChat.isGlobal) {
         markReadApi(activeChat.id, currentUser.id).catch(() => {});
         const socket = getSocket();
@@ -117,12 +124,14 @@ export const App = () => {
   // Handle user logout
   const handleLogout = () => {
     disconnectSocket();
-    localStorage.removeItem('chatflow_user');
-    localStorage.removeItem('pulsechat_user');
+    try {
+      localStorage.removeItem('chatflow_user');
+      localStorage.removeItem('pulsechat_user');
+    } catch (e) {}
     setCurrentUser(null);
   };
 
-  // Socket.io initialization and real-time listeners
+  // Socket.io initialization and real-time listeners - ONLY depends on currentUser.id
   useEffect(() => {
     if (!currentUser) return;
 
@@ -144,23 +153,21 @@ export const App = () => {
     };
 
     const onReceiveMessage = (newMessage) => {
-      // Check if message belongs to current active view
-      const isForGlobal = activeChat.isGlobal && newMessage.receiver_id === 'global';
+      const currentActive = activeChatRef.current;
+      const isForGlobal = currentActive.isGlobal && newMessage.receiver_id === 'global';
       const isForDirect =
-        !activeChat.isGlobal &&
-        ((newMessage.sender_id === activeChat.id && newMessage.receiver_id === currentUser.id) ||
-          (newMessage.sender_id === currentUser.id && newMessage.receiver_id === activeChat.id));
+        !currentActive.isGlobal &&
+        ((newMessage.sender_id === currentActive.id && newMessage.receiver_id === currentUser.id) ||
+          (newMessage.sender_id === currentUser.id && newMessage.receiver_id === currentActive.id));
 
       if (isForGlobal || isForDirect) {
         setMessages((prev) => {
-          // Avoid duplicate messages
           if (prev.some((m) => m.id === newMessage.id)) return prev;
           return [...prev, newMessage];
         });
 
-        // Mark as read if user is currently looking at this DM
-        if (isForDirect && newMessage.sender_id === activeChat.id) {
-          socket.emit('mark_read', { sender_id: activeChat.id, receiver_id: currentUser.id });
+        if (isForDirect && newMessage.sender_id === currentActive.id) {
+          socket.emit('mark_read', { sender_id: currentActive.id, receiver_id: currentUser.id });
         }
       }
     };
@@ -172,9 +179,10 @@ export const App = () => {
     };
 
     const onUserTyping = ({ sender_id, sender_name, receiver_id }) => {
+      const currentActive = activeChatRef.current;
       const isMatchingChat =
-        (activeChat.isGlobal && receiver_id === 'global') ||
-        (!activeChat.isGlobal && sender_id === activeChat.id && receiver_id === currentUser.id);
+        (currentActive.isGlobal && receiver_id === 'global') ||
+        (!currentActive.isGlobal && sender_id === currentActive.id && receiver_id === currentUser.id);
 
       if (isMatchingChat) {
         setTypingUsers((prev) => (prev.includes(sender_name) ? prev : [...prev, sender_name]));
@@ -186,7 +194,8 @@ export const App = () => {
     };
 
     const onMessagesRead = ({ by_user }) => {
-      if (!activeChat.isGlobal && activeChat.id === by_user) {
+      const currentActive = activeChatRef.current;
+      if (!currentActive.isGlobal && currentActive.id === by_user) {
         setMessages((prev) =>
           prev.map((m) => (m.sender_id === currentUser.id ? { ...m, status: 'read' } : m))
         );
@@ -205,12 +214,8 @@ export const App = () => {
     socket.on('messages_read', onMessagesRead);
 
     const syncStatus = () => {
-      if (socket) {
-        if (socket.connected) {
-          setConnectionStatus('connected');
-        } else {
-          setConnectionStatus('reconnecting');
-        }
+      if (socket && socket.connected) {
+        setConnectionStatus('connected');
       }
     };
 
@@ -230,7 +235,7 @@ export const App = () => {
       socket.off('user_stopped_typing', onUserStoppedTyping);
       socket.off('messages_read', onMessagesRead);
     };
-  }, [currentUser, activeChat, loadUsers]);
+  }, [currentUser?.id, loadUsers]);
 
   // Load message history when active chat changes
   useEffect(() => {
@@ -246,14 +251,12 @@ export const App = () => {
 
     const socket = getSocket();
     if (socket && socket.connected) {
-      // Send via Socket.io for instant real-time delivery
       socket.emit('send_message', {
         sender_id: currentUser.id,
         receiver_id: activeChat.id,
         content
       });
     } else {
-      // Fallback via REST API or instant optimistic local message
       try {
         const res = await postMessage(currentUser.id, activeChat.id, content);
         if (res && res.message && res.message.id && res.message.sender_id) {
@@ -264,7 +267,6 @@ export const App = () => {
         console.warn('Backend REST post failed, using local optimistic message:', err);
       }
 
-      // Optimistic message fallback so UI message sending NEVER fails!
       const localMsg = {
         id: 'msg_' + Math.random().toString(36).substring(2, 12),
         sender_id: currentUser.id,
@@ -281,7 +283,7 @@ export const App = () => {
 
   const handleTypingStart = () => {
     const socket = getSocket();
-    if (socket && currentUser) {
+    if (socket && currentUser && socket.connected) {
       socket.emit('typing_start', {
         sender_id: currentUser.id,
         sender_name: currentUser.username,
@@ -292,7 +294,7 @@ export const App = () => {
 
   const handleTypingStop = () => {
     const socket = getSocket();
-    if (socket && currentUser) {
+    if (socket && currentUser && socket.connected) {
       socket.emit('typing_stop', {
         sender_id: currentUser.id,
         receiver_id: activeChat.id
