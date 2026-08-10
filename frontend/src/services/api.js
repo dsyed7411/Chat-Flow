@@ -3,7 +3,7 @@ const getApiBaseUrl = () => {
     return import.meta.env.VITE_API_URL;
   }
   if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-    return 'https://chat-flow-backend.onrender.com/api';
+    return 'https://chat-flow-backend-53ra.onrender.com/api';
   }
   return 'http://localhost:5000/api';
 };
@@ -40,7 +40,7 @@ export const loginUser = async (username, avatar) => {
   const avatarUrl = avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(cleanUsername)}`;
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 2000);
+  const timeoutId = setTimeout(() => controller.abort(), 3000);
 
   try {
     const data = await safeFetchJson(`${API_BASE_URL}/auth/login`, {
@@ -53,7 +53,6 @@ export const loginUser = async (username, avatar) => {
     return data;
   } catch (e) {
     clearTimeout(timeoutId);
-    // Instant fallback user so login NEVER hangs on Render cold starts or network delays
     return {
       user: {
         id: 'usr_' + Math.random().toString(36).substring(2, 10),

@@ -13,11 +13,10 @@ const app = express();
 const server = http.createServer(app);
 
 const PORT = process.env.PORT || 5000;
-const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 
 // Middleware
 app.use(cors({
-  origin: '*', // Allow all origins for local dev and hosting freedom
+  origin: '*', // Allow all origins
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true
 }));
@@ -36,6 +35,18 @@ app.set('io', io);
 
 // Initialize Socket.io event listeners
 socketHandler(io);
+
+// Root Endpoint
+app.get('/', (req, res) => {
+  res.setHeader('Content-Type', 'text/html');
+  res.status(200).send(`
+    <div style="font-family: system-ui, sans-serif; text-align: center; padding: 50px; background: #0b0f19; color: #fff; height: 100vh; box-sizing: border-box;">
+      <h1 style="color: #6366f1; font-size: 2.5rem;">⚡ ChatFlow Backend API is Active!</h1>
+      <p style="color: #9ca3af; font-size: 1.1rem;">Node.js + Express + Socket.io Server is running smoothly.</p>
+      <p style="margin-top: 20px;"><a href="/api/health" style="color: #38bdf8; text-decoration: none; font-weight: 600;">Check Health Status (/api/health)</a></p>
+    </div>
+  `);
+});
 
 // API Routes
 app.use('/api/auth', authRoutes);
