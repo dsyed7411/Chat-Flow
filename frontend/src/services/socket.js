@@ -19,14 +19,21 @@ export const initSocket = (user) => {
     socket = io(SOCKET_URL, {
       autoConnect: true,
       reconnection: true,
-      reconnectionAttempts: 10,
+      reconnectionAttempts: 20,
       reconnectionDelay: 1000,
-      transports: ['websocket', 'polling']
+      transports: ['polling', 'websocket'],
+      withCredentials: true
     });
   }
 
   if (socket && user) {
-    socket.emit('user_connected', user);
+    if (socket.connected) {
+      socket.emit('user_connected', user);
+    } else {
+      socket.once('connect', () => {
+        socket.emit('user_connected', user);
+      });
+    }
   }
 
   return socket;

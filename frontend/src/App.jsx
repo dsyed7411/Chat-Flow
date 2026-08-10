@@ -139,7 +139,7 @@ export const App = () => {
       setConnectionStatus('offline');
     };
 
-    const onReconnectAttempt = () => {
+    const onConnecting = () => {
       setConnectionStatus('reconnecting');
     };
 
@@ -194,8 +194,10 @@ export const App = () => {
     };
 
     socket.on('connect', onConnect);
+    socket.on('reconnect', onConnect);
     socket.on('disconnect', onDisconnect);
-    socket.on('reconnect_attempt', onReconnectAttempt);
+    socket.on('connect_error', onConnecting);
+    socket.on('reconnect_attempt', onConnecting);
     socket.on('receive_message', onReceiveMessage);
     socket.on('user_status_changed', onUserStatusChanged);
     socket.on('user_typing', onUserTyping);
@@ -203,13 +205,17 @@ export const App = () => {
     socket.on('messages_read', onMessagesRead);
 
     if (socket.connected) {
-      setConnectionStatus('connected');
+      onConnect();
+    } else {
+      setConnectionStatus('reconnecting');
     }
 
     return () => {
       socket.off('connect', onConnect);
+      socket.off('reconnect', onConnect);
       socket.off('disconnect', onDisconnect);
-      socket.off('reconnect_attempt', onReconnectAttempt);
+      socket.off('connect_error', onConnecting);
+      socket.off('reconnect_attempt', onConnecting);
       socket.off('receive_message', onReceiveMessage);
       socket.off('user_status_changed', onUserStatusChanged);
       socket.off('user_typing', onUserTyping);
