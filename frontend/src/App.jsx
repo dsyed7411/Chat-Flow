@@ -84,23 +84,34 @@ export const App = () => {
 
   // Handle user login
   const handleLogin = async (username, avatar) => {
+    const cleanName = (username || '').trim() || 'Guest';
+    const cleanAvatar = avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(cleanName)}`;
+
+    let userToSet = null;
     try {
-      const data = await loginUser(username, avatar);
-      const user = data.user;
-      setCurrentUser(user);
-      localStorage.setItem('chatflow_user', JSON.stringify(user));
+      const data = await loginUser(cleanName, cleanAvatar);
+      if (data && data.user && data.user.id) {
+        userToSet = data.user;
+      }
     } catch (e) {
-      const fallbackUser = {
+      console.warn('Backend login fallback:', e);
+    }
+
+    if (!userToSet) {
+      userToSet = {
         id: 'usr_' + Math.random().toString(36).substring(2, 10),
-        username: username.trim(),
-        avatar: avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(username.trim())}`,
+        username: cleanName,
+        avatar: cleanAvatar,
         status: 'online',
         last_seen: new Date().toISOString(),
         created_at: new Date().toISOString()
       };
-      setCurrentUser(fallbackUser);
-      localStorage.setItem('chatflow_user', JSON.stringify(fallbackUser));
     }
+
+    setCurrentUser(userToSet);
+    try {
+      localStorage.setItem('chatflow_user', JSON.stringify(userToSet));
+    } catch (e) {}
   };
 
   // Handle user logout
