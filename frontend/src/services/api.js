@@ -29,7 +29,7 @@ export const loginUser = async (username, avatar) => {
   const avatarUrl = avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(cleanUsername)}`;
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 4000);
+  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout for Render cold starts
 
   try {
     const data = await safeFetchJson(`${API_BASE_URL}/auth/login`, {
@@ -42,6 +42,7 @@ export const loginUser = async (username, avatar) => {
     return data;
   } catch (e) {
     clearTimeout(timeoutId);
+    console.warn('Backend login request fallback:', e);
     return {
       user: {
         id: 'usr_' + Math.random().toString(36).substring(2, 10),
@@ -58,7 +59,7 @@ export const loginUser = async (username, avatar) => {
 export const fetchUsers = async () => {
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
     const data = await safeFetchJson(`${API_BASE_URL}/auth/users`, { signal: controller.signal });
     clearTimeout(timeoutId);
     return data;
@@ -74,7 +75,7 @@ export const fetchMessages = async (receiver_id = 'global', sender_id = null) =>
   }
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
     const data = await safeFetchJson(url, { signal: controller.signal });
     clearTimeout(timeoutId);
     return data;
