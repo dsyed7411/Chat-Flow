@@ -205,8 +205,12 @@ export const App = () => {
     socket.on('messages_read', onMessagesRead);
 
     const syncStatus = () => {
-      if (socket && socket.connected) {
-        setConnectionStatus('connected');
+      if (socket) {
+        if (socket.connected) {
+          setConnectionStatus('connected');
+        } else {
+          setConnectionStatus('reconnecting');
+        }
       }
     };
 

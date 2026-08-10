@@ -17,22 +17,22 @@ let socket = null;
 export const initSocket = (user) => {
   if (!socket) {
     socket = io(SOCKET_URL, {
-      autoConnect: true,
-      reconnection: true,
-      reconnectionAttempts: 20,
-      reconnectionDelay: 1000,
       transports: ['polling', 'websocket'],
-      withCredentials: true
+      upgrade: true,
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 20000
     });
   }
 
-  if (socket && user) {
-    if (socket.connected) {
+  if (socket) {
+    if (!socket.connected) {
+      socket.connect();
+    }
+    if (user) {
       socket.emit('user_connected', user);
-    } else {
-      socket.once('connect', () => {
-        socket.emit('user_connected', user);
-      });
     }
   }
 
