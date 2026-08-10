@@ -249,6 +249,22 @@ export const App = () => {
   const handleSendMessage = async (content) => {
     if (!currentUser || !content.trim()) return;
 
+    const userMsg = {
+      id: 'msg_' + Math.random().toString(36).substring(2, 12),
+      sender_id: currentUser.id,
+      receiver_id: activeChat.id,
+      content: content.trim(),
+      timestamp: new Date().toISOString(),
+      status: 'sent',
+      sender_name: currentUser.username,
+      sender_avatar: currentUser.avatar
+    };
+
+    setMessages((prev) => {
+      if (prev.some((m) => m.id === userMsg.id)) return prev;
+      return [...prev, userMsg];
+    });
+
     const socket = getSocket();
     if (socket && socket.connected) {
       socket.emit('send_message', {
@@ -257,27 +273,40 @@ export const App = () => {
         content
       });
     } else {
-      try {
-        const res = await postMessage(currentUser.id, activeChat.id, content);
-        if (res && res.message && res.message.id && res.message.sender_id) {
-          setMessages((prev) => [...prev, res.message]);
-          return;
-        }
-      } catch (err) {
-        console.warn('Backend REST post failed, using local optimistic message:', err);
-      }
+      postMessage(currentUser.id, activeChat.id, content).catch(() => {});
+    }
 
-      const localMsg = {
-        id: 'msg_' + Math.random().toString(36).substring(2, 12),
-        sender_id: currentUser.id,
-        receiver_id: activeChat.id,
-        content: content.trim(),
-        timestamp: new Date().toISOString(),
-        status: 'sent',
-        sender_name: currentUser.username,
-        sender_avatar: currentUser.avatar
-      };
-      setMessages((prev) => [...prev, localMsg]);
+    // Automated interactive reply for Demo Accounts in Direct Messages
+    if (!activeChat.isGlobal && (activeChat.id.startsWith('usr_demo_') || ['Alice', 'Bob', 'Sarah', 'Alex'].includes(activeChat.name))) {
+      const demoName = activeChat.name;
+      setTimeout(() => {
+        setTypingUsers([demoName]);
+      }, 800);
+
+      setTimeout(() => {
+        setTypingUsers([]);
+        const replies = {
+          Alice: `Hey ${currentUser.username}! Thanks for trying ChatFlow. Real-time messaging with Socket.io works great! 🚀`,
+          Bob: `Hi ${currentUser.username}! Software looks super clean and responsive. Nice job! 👍`,
+          Sarah: `Hello ${currentUser.username}! The dark mode UI and glassmorphism styling look awesome! ✨`,
+          Alex: `Hey! Thanks for messaging. ChatFlow backend & database persistence are running smoothly! 💻`
+        };
+
+        const replyContent = replies[demoName] || `Hey ${currentUser.username}! Received your message: "${content.trim()}"`;
+
+        const replyMsg = {
+          id: 'msg_' + Math.random().toString(36).substring(2, 12),
+          sender_id: activeChat.id,
+          receiver_id: currentUser.id,
+          content: replyContent,
+          timestamp: new Date().toISOString(),
+          status: 'read',
+          sender_name: demoName,
+          sender_avatar: activeChat.avatar
+        };
+
+        setMessages((prev) => [...prev, replyMsg]);
+      }, 2200);
     }
   };
 

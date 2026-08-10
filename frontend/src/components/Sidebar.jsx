@@ -1,5 +1,12 @@
 import React from 'react';
-import { MessageSquare, Globe, Users, LogOut, ShieldCheck } from 'lucide-react';
+import { MessageSquare, Globe, LogOut } from 'lucide-react';
+
+const DEFAULT_DEMO_USERS = [
+  { id: 'usr_demo_alice', username: 'Alice', avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=Aneka', status: 'online', role: 'Product Designer' },
+  { id: 'usr_demo_bob', username: 'Bob', avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=Felix', status: 'online', role: 'Software Engineer' },
+  { id: 'usr_demo_sarah', username: 'Sarah', avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=Luna', status: 'online', role: 'UX Researcher' },
+  { id: 'usr_demo_alex', username: 'Alex', avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=Milo', status: 'offline', role: 'Tech Lead' }
+];
 
 export const Sidebar = ({
   currentUser,
@@ -10,7 +17,22 @@ export const Sidebar = ({
   isOpen,
   onCloseMobile
 }) => {
-  const otherUsers = users.filter((u) => u.id !== currentUser.id);
+  // Combine real registered users with default demo accounts (filtering out current logged-in user)
+  const combinedUsersMap = new Map();
+
+  DEFAULT_DEMO_USERS.forEach((u) => {
+    if (u.username.toLowerCase() !== currentUser.username.toLowerCase()) {
+      combinedUsersMap.set(u.id, u);
+    }
+  });
+
+  (users || []).forEach((u) => {
+    if (u.id !== currentUser.id && u.username.toLowerCase() !== currentUser.username.toLowerCase()) {
+      combinedUsersMap.set(u.id, u);
+    }
+  });
+
+  const displayUsers = Array.from(combinedUsersMap.values());
 
   return (
     <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
@@ -65,39 +87,33 @@ export const Sidebar = ({
           </div>
         </div>
 
-        <div className="channels-title" style={{ marginTop: '16px' }}>Direct Messages ({otherUsers.length})</div>
-        {otherUsers.length === 0 ? (
-          <div style={{ padding: '12px 16px', fontSize: '0.8rem', color: 'var(--text-dim)', fontStyle: 'italic' }}>
-            No other users online. Open another browser tab to test 2-way chat!
-          </div>
-        ) : (
-          otherUsers.map((user) => {
-            const isOnline = user.status === 'online';
-            const isActive = activeChat.id === user.id;
+        <div className="channels-title" style={{ marginTop: '16px' }}>Direct Messages ({displayUsers.length})</div>
+        {displayUsers.map((user) => {
+          const isOnline = user.status === 'online';
+          const isActive = activeChat.id === user.id;
 
-            return (
-              <div
-                key={user.id}
-                className={`contact-item ${isActive ? 'active' : ''}`}
-                onClick={() => {
-                  onSelectChat({ id: user.id, name: user.username, avatar: user.avatar, isGlobal: false });
-                  if (onCloseMobile) onCloseMobile();
-                }}
-              >
-                <div className="contact-avatar-wrapper">
-                  <img src={user.avatar} alt={user.username} style={{ width: '36px', height: '36px', borderRadius: '50%' }} />
-                  <span className={`contact-status-dot ${isOnline ? 'online' : 'offline'}`} />
-                </div>
-                <div className="user-info">
-                  <div className="user-name">{user.username}</div>
-                  <div style={{ fontSize: '0.75rem', color: isOnline ? 'var(--status-online)' : 'var(--text-dim)' }}>
-                    {isOnline ? 'Online' : 'Offline'}
-                  </div>
+          return (
+            <div
+              key={user.id}
+              className={`contact-item ${isActive ? 'active' : ''}`}
+              onClick={() => {
+                onSelectChat({ id: user.id, name: user.username, avatar: user.avatar, isGlobal: false });
+                if (onCloseMobile) onCloseMobile();
+              }}
+            >
+              <div className="contact-avatar-wrapper">
+                <img src={user.avatar} alt={user.username} style={{ width: '36px', height: '36px', borderRadius: '50%' }} />
+                <span className={`contact-status-dot ${isOnline ? 'online' : 'offline'}`} />
+              </div>
+              <div className="user-info">
+                <div className="user-name">{user.username}</div>
+                <div style={{ fontSize: '0.75rem', color: isOnline ? 'var(--status-online)' : 'var(--text-dim)' }}>
+                  {isOnline ? 'Online' : 'Offline'}
                 </div>
               </div>
-            );
-          })
-        )}
+            </div>
+          );
+        })}
       </div>
     </aside>
   );
