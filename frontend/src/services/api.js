@@ -39,34 +39,41 @@ export const loginUser = async (username, avatar) => {
   const cleanUsername = username.trim();
   const avatarUrl = avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(cleanUsername)}`;
 
-  // Fast 3.5s timeout promise so user is NEVER stuck on "Joining Chat..." if Render free backend is sleeping
-  const instantFallback = new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({
-        user: {
-          id: 'usr_' + Math.random().toString(36).substring(2, 10),
-          username: cleanUsername,
-          avatar: avatarUrl,
-          status: 'online',
-          last_seen: new Date().toISOString(),
-          created_at: new Date().toISOString()
-        }
-      });
-    }, 3500);
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 2000);
 
-  const apiFetch = safeFetchJson(`${API_BASE_URL}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username: cleanUsername, avatar: avatarUrl }),
-  });
-
-  return Promise.race([apiFetch, instantFallback]);
+  try {
+    const data = await safeFetchJson(`${API_BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: cleanUsername, avatar: avatarUrl }),
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    return data;
+  } catch (e) {
+    clearTimeout(timeoutId);
+    // Instant fallback user so login NEVER hangs on Render cold starts or network delays
+    return {
+      user: {
+        id: 'usr_' + Math.random().toString(36).substring(2, 10),
+        username: cleanUsername,
+        avatar: avatarUrl,
+        status: 'online',
+        last_seen: new Date().toISOString(),
+        created_at: new Date().toISOString()
+      }
+    };
+  }
 };
 
 export const fetchUsers = async () => {
   try {
-    return await safeFetchJson(`${API_BASE_URL}/auth/users`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    const data = await safeFetchJson(`${API_BASE_URL}/auth/users`, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    return data;
   } catch (e) {
     return { users: [] };
   }
@@ -78,7 +85,11 @@ export const fetchMessages = async (receiver_id = 'global', sender_id = null) =>
     url += `&sender_id=${encodeURIComponent(sender_id)}`;
   }
   try {
-    return await safeFetchJson(url);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    const data = await safeFetchJson(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    return data;
   } catch (e) {
     return { messages: [] };
   }

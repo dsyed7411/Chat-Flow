@@ -27,6 +27,7 @@ export const LoginModal = ({ onLogin }) => {
       await onLogin(name.trim(), avatarUrl);
     } catch (err) {
       setError(err.message || 'Login failed. Please try again.');
+    } finally {
       setLoading(false);
     }
   };
