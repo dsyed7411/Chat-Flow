@@ -9,18 +9,18 @@ exports.getMessages = async (req, res) => {
     let messages;
     if (receiver_id === 'global') {
       messages = await dbAsync.all(
-        `SELECT m.*, u.username as sender_name, u.avatar as sender_avatar 
+        `SELECT m.*, COALESCE(u.username, 'User') as sender_name, COALESCE(u.avatar, '') as sender_avatar 
          FROM messages m 
-         JOIN users u ON m.sender_id = u.id 
+         LEFT JOIN users u ON m.sender_id = u.id 
          WHERE m.receiver_id = 'global' 
          ORDER BY m.timestamp ASC`
       );
     } else if (sender_id) {
       // Direct messages between sender_id and receiver_id
       messages = await dbAsync.all(
-        `SELECT m.*, u.username as sender_name, u.avatar as sender_avatar 
+        `SELECT m.*, COALESCE(u.username, 'User') as sender_name, COALESCE(u.avatar, '') as sender_avatar 
          FROM messages m 
-         JOIN users u ON m.sender_id = u.id 
+         LEFT JOIN users u ON m.sender_id = u.id 
          WHERE (m.sender_id = ? AND m.receiver_id = ?) 
             OR (m.sender_id = ? AND m.receiver_id = ?) 
          ORDER BY m.timestamp ASC`,
@@ -30,7 +30,7 @@ exports.getMessages = async (req, res) => {
       return res.status(400).json({ error: 'sender_id is required for direct messages' });
     }
 
-    res.status(200).json({ messages });
+    res.status(200).json({ messages: messages || [] });
   } catch (error) {
     console.error('Get messages error:', error);
     res.status(500).json({ error: 'Failed to retrieve message history' });
@@ -39,15 +39,22 @@ exports.getMessages = async (req, res) => {
 
 exports.sendMessage = async (req, res) => {
   try {
-    const { sender_id, receiver_id = 'global', content } = req.body;
+    const { sender_id, receiver_id = 'global', content, sender_name, sender_avatar } = req.body;
 
     if (!sender_id || !content || !content.trim()) {
       return res.status(400).json({ error: 'sender_id and content are required' });
     }
 
-    const sender = await dbAsync.get('SELECT * FROM users WHERE id = ?', [sender_id]);
+    let sender = await dbAsync.get('SELECT * FROM users WHERE id = ?', [sender_id]);
     if (!sender) {
-      return res.status(404).json({ error: 'Sender user not found' });
+      const now = new Date().toISOString();
+      const defaultName = sender_name || 'User';
+      const defaultAvatar = sender_avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(sender_id)}`;
+      await dbAsync.run(
+        'INSERT INTO users (id, username, avatar, status, last_seen, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+        [sender_id, defaultName, defaultAvatar, 'online', now, now]
+      );
+      sender = await dbAsync.get('SELECT * FROM users WHERE id = ?', [sender_id]);
     }
 
     const id = generateId();
@@ -66,17 +73,15 @@ exports.sendMessage = async (req, res) => {
       content: content.trim(),
       timestamp,
       status,
-      sender_name: sender.username,
-      sender_avatar: sender.avatar
+      sender_name: sender ? sender.username : (sender_name || 'User'),
+      sender_avatar: sender ? sender.avatar : (sender_avatar || '')
     };
 
-    // Access socket.io instance attached to req.app
     const io = req.app.get('io');
     if (io) {
       if (receiver_id === 'global') {
         io.emit('receive_message', fullMessage);
       } else {
-        // Emit to both sender and receiver rooms if connected
         io.to(receiver_id).to(sender_id).emit('receive_message', fullMessage);
       }
     }
@@ -90,7 +95,7 @@ exports.sendMessage = async (req, res) => {
 
 exports.markAsRead = async (req, res) => {
   try {
-    const { sender_id, receiver_id } = req.body; // sender_id is the user who sent the messages, receiver_id is current user reading them
+    const { sender_id, receiver_id } = req.body;
 
     if (!sender_id || !receiver_id) {
       return res.status(400).json({ error: 'sender_id and receiver_id are required' });

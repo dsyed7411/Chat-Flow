@@ -16,18 +16,18 @@ const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors({
-  origin: true, // Allow requesting origin dynamically
+  origin: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true
 }));
 app.use(express.json());
 
-// Initialize Socket.io
+// Initialize Socket.io with valid origin function
 const io = new Server(server, {
   cors: {
-    origin: true, // Allow requesting origin dynamically
-    credentials: true,
-    methods: ['GET', 'POST']
+    origin: (origin, callback) => callback(null, true),
+    methods: ['GET', 'POST'],
+    credentials: true
   }
 });
 

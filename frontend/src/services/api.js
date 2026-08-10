@@ -1,4 +1,4 @@
-const getApiBaseUrl = () => {
+const API_BASE_URL = (() => {
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
@@ -6,26 +6,15 @@ const getApiBaseUrl = () => {
     return 'https://chat-flow-backend-53ra.onrender.com/api';
   }
   return 'http://localhost:5000/api';
-};
-
-const API_BASE_URL = getApiBaseUrl();
+})();
 
 const safeFetchJson = async (url, options = {}) => {
-  let response;
+  const response = await fetch(url, options);
+  let data;
   try {
-    response = await fetch(url, options);
-  } catch (err) {
-    throw new Error('Unable to connect to backend server');
-  }
-
-  const text = await response.text();
-  let data = {};
-  if (text) {
-    try {
-      data = JSON.parse(text);
-    } catch (e) {
-      throw new Error('Invalid JSON response from server');
-    }
+    data = await response.json();
+  } catch (e) {
+    data = {};
   }
 
   if (!response.ok) {
@@ -40,7 +29,7 @@ export const loginUser = async (username, avatar) => {
   const avatarUrl = avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(cleanUsername)}`;
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 3000);
+  const timeoutId = setTimeout(() => controller.abort(), 4000);
 
   try {
     const data = await safeFetchJson(`${API_BASE_URL}/auth/login`, {
@@ -94,11 +83,11 @@ export const fetchMessages = async (receiver_id = 'global', sender_id = null) =>
   }
 };
 
-export const postMessage = async (sender_id, receiver_id, content) => {
+export const postMessage = async (sender_id, receiver_id, content, sender_name, sender_avatar) => {
   return safeFetchJson(`${API_BASE_URL}/messages`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sender_id, receiver_id, content }),
+    body: JSON.stringify({ sender_id, receiver_id, content, sender_name, sender_avatar }),
   });
 };
 

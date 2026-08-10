@@ -12,43 +12,59 @@ module.exports = (io) => {
       if (!userData || !userData.id) return;
 
       const userId = userData.id;
+      const username = userData.username || 'User';
+      const avatar = userData.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(userId)}`;
+
       socket.userId = userId;
 
-      // Add socket ID to user's set of active sockets
       if (!onlineUsers.has(userId)) {
         onlineUsers.set(userId, new Set());
       }
       onlineUsers.get(userId).add(socket.id);
 
-      // Join socket room corresponding to user ID for targeted messages
       socket.join(userId);
 
-      // Update SQLite user status to online
       const now = new Date().toISOString();
-      await dbAsync.run(
-        'UPDATE users SET status = ?, last_seen = ? WHERE id = ?',
-        ['online', now, userId]
-      );
+      let user = await dbAsync.get('SELECT * FROM users WHERE id = ?', [userId]);
+      if (user) {
+        await dbAsync.run(
+          'UPDATE users SET status = ?, avatar = ?, last_seen = ? WHERE id = ?',
+          ['online', avatar, now, userId]
+        );
+      } else {
+        await dbAsync.run(
+          'INSERT INTO users (id, username, avatar, status, last_seen, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+          [userId, username, avatar, 'online', now, now]
+        );
+      }
 
-      // Broadcast user online status update to all connected clients
       io.emit('user_status_changed', {
         userId,
         status: 'online',
         last_seen: now
       });
 
-      console.log(`User registered: ${userData.username} (${userId})`);
+      console.log(`User registered: ${username} (${userId})`);
     });
 
     // Real-time message handler
     socket.on('send_message', async (data) => {
       try {
-        const { sender_id, receiver_id = 'global', content } = data;
+        const { sender_id, receiver_id = 'global', content, sender_name, sender_avatar } = data;
 
         if (!sender_id || !content || !content.trim()) return;
 
-        const sender = await dbAsync.get('SELECT * FROM users WHERE id = ?', [sender_id]);
-        if (!sender) return;
+        let sender = await dbAsync.get('SELECT * FROM users WHERE id = ?', [sender_id]);
+        if (!sender) {
+          const now = new Date().toISOString();
+          const defaultName = sender_name || 'User';
+          const defaultAvatar = sender_avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(sender_id)}`;
+          await dbAsync.run(
+            'INSERT INTO users (id, username, avatar, status, last_seen, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+            [sender_id, defaultName, defaultAvatar, 'online', now, now]
+          );
+          sender = await dbAsync.get('SELECT * FROM users WHERE id = ?', [sender_id]);
+        }
 
         const id = 'msg_' + Math.random().toString(36).substring(2, 12);
         const timestamp = new Date().toISOString();
@@ -66,14 +82,13 @@ module.exports = (io) => {
           content: content.trim(),
           timestamp,
           status,
-          sender_name: sender.username,
-          sender_avatar: sender.avatar
+          sender_name: sender ? sender.username : (sender_name || 'User'),
+          sender_avatar: sender ? sender.avatar : (sender_avatar || '')
         };
 
         if (receiver_id === 'global') {
           io.emit('receive_message', fullMessage);
         } else {
-          // Emit to both sender and recipient user rooms
           io.to(receiver_id).to(sender_id).emit('receive_message', fullMessage);
         }
       } catch (err) {

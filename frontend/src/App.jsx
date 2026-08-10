@@ -270,43 +270,16 @@ export const App = () => {
       socket.emit('send_message', {
         sender_id: currentUser.id,
         receiver_id: activeChat.id,
-        content
+        content: content.trim(),
+        sender_name: currentUser.username,
+        sender_avatar: currentUser.avatar
       });
     } else {
-      postMessage(currentUser.id, activeChat.id, content).catch(() => {});
-    }
-
-    // Automated interactive reply for Demo Accounts in Direct Messages
-    if (!activeChat.isGlobal && (activeChat.id.startsWith('usr_demo_') || ['Alice', 'Bob', 'Sarah', 'Alex'].includes(activeChat.name))) {
-      const demoName = activeChat.name;
-      setTimeout(() => {
-        setTypingUsers([demoName]);
-      }, 800);
-
-      setTimeout(() => {
-        setTypingUsers([]);
-        const replies = {
-          Alice: `Hey ${currentUser.username}! Thanks for trying ChatFlow. Real-time messaging with Socket.io works great! 🚀`,
-          Bob: `Hi ${currentUser.username}! Software looks super clean and responsive. Nice job! 👍`,
-          Sarah: `Hello ${currentUser.username}! The dark mode UI and glassmorphism styling look awesome! ✨`,
-          Alex: `Hey! Thanks for messaging. ChatFlow backend & database persistence are running smoothly! 💻`
-        };
-
-        const replyContent = replies[demoName] || `Hey ${currentUser.username}! Received your message: "${content.trim()}"`;
-
-        const replyMsg = {
-          id: 'msg_' + Math.random().toString(36).substring(2, 12),
-          sender_id: activeChat.id,
-          receiver_id: currentUser.id,
-          content: replyContent,
-          timestamp: new Date().toISOString(),
-          status: 'read',
-          sender_name: demoName,
-          sender_avatar: activeChat.avatar
-        };
-
-        setMessages((prev) => [...prev, replyMsg]);
-      }, 2200);
+      try {
+        await postMessage(currentUser.id, activeChat.id, content.trim(), currentUser.username, currentUser.avatar);
+      } catch (err) {
+        console.warn('REST message post error:', err);
+      }
     }
   };
 
