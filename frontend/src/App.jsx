@@ -204,13 +204,17 @@ export const App = () => {
     socket.on('user_stopped_typing', onUserStoppedTyping);
     socket.on('messages_read', onMessagesRead);
 
-    if (socket.connected) {
-      onConnect();
-    } else {
-      setConnectionStatus('reconnecting');
-    }
+    const syncStatus = () => {
+      if (socket && socket.connected) {
+        setConnectionStatus('connected');
+      }
+    };
+
+    syncStatus();
+    const statusInterval = setInterval(syncStatus, 1000);
 
     return () => {
+      clearInterval(statusInterval);
       socket.off('connect', onConnect);
       socket.off('reconnect', onConnect);
       socket.off('disconnect', onDisconnect);
