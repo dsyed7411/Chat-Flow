@@ -21,7 +21,9 @@ export const MessageList = ({ messages, currentUser, typingUsers, isGlobal }) =>
 
   const groupMessagesByDate = (msgs) => {
     const groups = {};
-    msgs.forEach((msg) => {
+    const validMsgs = (msgs || []).filter((msg) => msg && msg.id && msg.sender_id);
+
+    validMsgs.forEach((msg) => {
       let dateKey = 'Unknown Date';
       try {
         const d = new Date(msg.timestamp);
@@ -67,7 +69,7 @@ export const MessageList = ({ messages, currentUser, typingUsers, isGlobal }) =>
             </div>
 
             {msgs.map((msg) => {
-              const isSentByMe = msg.sender_id === currentUser.id;
+              const isSentByMe = msg.sender_id === (currentUser?.id || '');
 
               return (
                 <div
@@ -76,15 +78,15 @@ export const MessageList = ({ messages, currentUser, typingUsers, isGlobal }) =>
                 >
                   {!isSentByMe && (
                     <img
-                      src={msg.sender_avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${msg.sender_name}`}
-                      alt={msg.sender_name}
+                      src={msg.sender_avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${msg.sender_name || 'User'}`}
+                      alt={msg.sender_name || 'User'}
                       style={{ width: '32px', height: '32px', borderRadius: '50%', marginTop: '4px' }}
                     />
                   )}
 
                   <div>
                     {!isSentByMe && isGlobal && (
-                      <div className="message-sender">{msg.sender_name}</div>
+                      <div className="message-sender">{msg.sender_name || 'User'}</div>
                     )}
                     <div className="message-bubble">
                       <div>{msg.content}</div>
